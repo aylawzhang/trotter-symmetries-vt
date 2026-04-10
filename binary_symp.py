@@ -33,13 +33,13 @@ def magnetization_operator(N):
         terms.append(("".join(reversed(op)), 1.0))
     return SparsePauliOp.from_list(terms)
 
-def trotter_evolution(H, psi_0, T, dt, M_op, N):
+def trotter_evolution(H, paulis, psi_0, T, dt, M_op, N):
     steps = int(T / dt)
     psi = psi_0.copy()
     mags = []
     M_mat = M_op.to_matrix()
     gates =[]
-    for label,coeff in H.to_list():
+    for label,coeff in paulis:
         gate = expm(-1j*coeff * SparsePauliOp(label).to_matrix() *dt)
         gates.append(gate)
     for _ in range(steps+1):
@@ -49,19 +49,18 @@ def trotter_evolution(H, psi_0, T, dt, M_op, N):
                 psi = U@psi
     return mags
 
-def qdrift_single_run(H, psi_0, T, dt, M_op, N):
-    pauli_list = H.to_list()
-    coeffs = np.array([abs(item[1]) for item in pauli_list])
+def qdrift_single_run(H, paulis, psi_0, T, dt, M_op, N):
+    coeffs = np.array([abs(item[1]) for item in paulis])
     lam = np.sum(coeffs)
     M_mat = M_op.to_matrix()
-    term_mats = [SparsePauliOp(p[0]).to_matrix() for p in pauli_list]
+    term_mats = [SparsePauliOp(p[0]).to_matrix() for p in paulis]
     steps = int(T/dt)
     probabilities = coeffs/lam
     psi = psi_0.copy()
     tau = T/steps
     for _ in range(steps):
-        idx = np.random.choice(len(pauli_list), p=probabilities)
-        coeff = pauli_list[idx][1]
+        idx = np.random.choice(len(paulis), p=probabilities)
+        coeff = paulis[idx][1]
         gate = expm(-1j * np.sign(coeff)*lam*tau*term_mats[idx])
         psi = gate@psi
     return np.real(np.vdot(psi, M_mat @ psi))/N
@@ -79,6 +78,8 @@ def test_evolution():
     
     H_op = heisenberg_xxz_hamiltonian(N, J, delta)
     M_op = magnetization_operator(N)
+    paulis = H_op.to_list()
+
 
     start = time.time()
     psi_exact = expm(-1j *H_op.to_matrix() *T) @psi_0
@@ -86,11 +87,11 @@ def test_evolution():
     time_exact = time.time() -start
 
     start = time.time()
-    t_mags = trotter_evolution(H_op, psi_0, T, dt, M_op, N)
+    t_mags = trotter_evolution(H_op,paulis, psi_0, T, dt, M_op, N)
     time_trotter = time.time() -start
 
     start = time.time()
-    q_results = [qdrift_single_run(H_op, psi_0, T, dt, M_op, N) for _ in range(trials)]
+    q_results = [qdrift_single_run(H_op,paulis, psi_0, T, dt, M_op, N) for _ in range(trials)]
     time_qdrift = time.time() -start
 
     print(f"Exact: {exact_mag:.6f} ({time_exact:.4f}s)")
