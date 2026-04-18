@@ -73,13 +73,15 @@ def qdrift_single_run(H, paulis, psi_0, T, dt, M_op, N):
     return mags
 
 
-def verify_symplectic_op():
+def verify_symplectic_op(): #try linear combo of states and Z operators, normalize
     N = 8
     psi = Statevector.from_label("0" * N)
+    print(psi)
     op = SparsePauliOp("IIIIIIIX")
     new_psi = psi.evolve(op)
+    print(new_psi)
     print(np.argmax(new_psi.data))
-# verify_symplectic_op()
+verify_symplectic_op()
 
 def test_evolution():
     N = 6
@@ -139,4 +141,4 @@ def test_evolution():
     plt.legend()
     plt.show()
 
-test_evolution()
+# test_evolution()
