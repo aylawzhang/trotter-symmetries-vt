@@ -34,7 +34,21 @@ def magnetization_operator(N):
         terms.append(("".join(reversed(op)), 1.0/N))
     return SparsePauliOp.from_list(terms)
 
-def trotter_evolution(H, paulis, psi_0, T, dt, M_op, N):
+def sample_shots(psi, N_shots):
+    probs = np.abs(psi.data)**2
+    states = np.arange(len(probs))
+    samples = np.random.choice(states, size=N_shots, p=probs)
+    return samples
+
+def samples_to_mag(samples, N):
+    total = 0
+    for s in samples:
+        bitstring = format(s, f"0{N}b")
+        z_vals = [(1 if b == '0' else -1) for b in bitstring]
+        total += np.mean(z_vals)
+    return total / len(samples)
+
+def trotter_evolution(H, paulis, psi_0, T, dt, M_op, N, N_shots):
     steps = int(T / dt)
     psi = psi_0.copy()
     mags = []
@@ -45,18 +59,19 @@ def trotter_evolution(H, paulis, psi_0, T, dt, M_op, N):
         theta = np.real(coeff) * dt
         gates.append((op, theta))
     for _ in range(steps+1):
-        mags.append(np.real(np.vdot(psi.data, (psi.evolve(M_op)).data)))
+        samples = sample_shots(psi, N_shots)
+        mag_est = samples_to_mag(samples, N)
+        mags.append(mag_est)
         if _ < steps:
             for op,theta in gates:
                 psi = (np.cos(theta) * psi) - (1j * np.sin(theta) * psi.evolve(op))
     return mags
 
-def qdrift_single_run(H, paulis, psi_0, T, dt, M_op, N):
+def qdrift_single_run(H, paulis, psi_0, T, dt, M_op, N, N_shots):
     coeffs = np.array([abs(item[1]) for item in paulis])
     lam = np.sum(coeffs)
     probabilities = coeffs/lam
 
-    # ops = [SparsePauliOp(p[0]) for p in paulis]
     ops=[Pauli(p[0]) for p in paulis]
     signs = [np.sign(np.real(p[1])) for p in paulis]
     
@@ -64,40 +79,35 @@ def qdrift_single_run(H, paulis, psi_0, T, dt, M_op, N):
     psi = psi_0.copy()
     tau = T*lam/steps
 
-    mags=[np.real(np.vdot(psi.data, (psi.evolve(M_op)).data))]
+    mags=[]
+    samples=sample_shots(psi,N_shots)
+    mags.append(samples_to_mag(samples,N))
     for _ in range(steps):
         idx = np.random.choice(len(paulis), p=probabilities)
         theta = signs[idx] * tau
         psi = np.cos(theta) * psi - 1j * np.sin(theta) * psi.evolve(ops[idx])
-        mags.append(np.real(np.vdot(psi.data, (psi.evolve(M_op)).data)))
+        samples=sample_shots(psi,N_shots)
+        mags.append(samples_to_mag(samples,N))
     return mags
 
-
-def verify_symplectic_op(): #try linear combo of states and Z operators, normalize
-    N = 8
-    psi = Statevector.from_label("0" * N)
-    print(psi)
-    op = SparsePauliOp("IIIIIIIX")
-    new_psi = psi.evolve(op)
-    print(new_psi)
-    print(np.argmax(new_psi.data))
-verify_symplectic_op()
-
 def test_evolution():
-    N = 6
+    N = 4
     J = 1.0
     delta = 1.0
+    h=1.0
     T = 0.5
     trials = 100
+    N_shots=1024
     
     psi_0 = Statevector(np.random.rand(2**N) + 1j*np.random.rand(2**N))
     psi_0 /= np.linalg.norm(psi_0)
 
-    H_op = ising_and_transverse_hamiltonian(N, J,delta)
+    H_op = ising_and_transverse_hamiltonian(N, J,h)
     M_op = magnetization_operator(N)
     paulis = H_op.to_list()
 
-    step_values = [10,50,100]
+    # step_values = [10,50,100]
+    step_values=[100]
 
     plt.figure()
 
@@ -105,7 +115,7 @@ def test_evolution():
     start_exact = time.time()
     H_mat = H_op.to_matrix()
     steps = step_values[-1]
-    dt = T / 50
+    dt = T / steps
     psi_exact = psi_0.copy()
     exact_mags = []
 
@@ -115,11 +125,12 @@ def test_evolution():
             psi_exact = Statevector(expm(-1j * H_mat * dt) @ psi_exact.data)
     end_exact = time.time()
     plt.plot(np.linspace(0, T, len(exact_mags)), exact_mags, "--", label=f"exact ({end_exact-start_exact:.4f}s)", linewidth=2)
+    
     #trotter
     for steps in step_values:
         dt = T / steps
         start_trot = time.time()
-        mags = trotter_evolution(H_op, paulis, psi_0, T, dt, M_op, N)
+        mags = trotter_evolution(H_op, paulis, psi_0, T, dt, M_op, N,N_shots)
         end_trot = time.time()
         plt.plot(np.linspace(0, T, steps + 1), mags, label=f"trotter {steps} steps ({end_trot-start_trot:.4f}s)")
     
@@ -130,7 +141,7 @@ def test_evolution():
 
     start_q = time.time()
     for _ in range(trials):
-        q_run = qdrift_single_run(H_op, paulis, psi_0, T, dt, M_op, N)
+        q_run = qdrift_single_run(H_op, paulis, psi_0, T, dt, M_op, N,N_shots)
         q_avg += np.array(q_run)
     q_avg /= trials
     end_q = time.time()
@@ -141,4 +152,4 @@ def test_evolution():
     plt.legend()
     plt.show()
 
-# test_evolution()
+test_evolution()
