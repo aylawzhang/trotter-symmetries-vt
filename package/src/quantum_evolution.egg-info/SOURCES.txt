@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/quantum_evolution/hamiltonians.py
+src/quantum_evolution/observables.py
+src/quantum_evolution/qdrift.py
+src/quantum_evolution/trotter.py
+src/quantum_evolution.egg-info/PKG-INFO
+src/quantum_evolution.egg-info/SOURCES.txt
+src/quantum_evolution.egg-info/dependency_links.txt
+src/quantum_evolution.egg-info/requires.txt
+src/quantum_evolution.egg-info/top_level.txt

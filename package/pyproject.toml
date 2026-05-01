@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantum_evolution"
+version = "0.1.0"
+authors = [
+  { name="Ayla Zhang", email="ayla.wm.zhang@gmail.com" },
+  { name="Sasha Zykova", email="sasha.zykova29@gmail.com" },
+  { name="Bharath Sambasivam", email="sbharath@vt.edu" },
+]
+description = "A package for Trotter and qDRIFT simulations"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "qiskit"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
