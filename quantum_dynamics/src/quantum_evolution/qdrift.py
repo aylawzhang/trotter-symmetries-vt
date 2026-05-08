@@ -1,8 +1,8 @@
 import numpy as np
 import random
-from qiskit.quantum_info import Pauli
-from .observables import sample_shots, evaluate_observable
-from .trotter import check_internal_commutation, check_obs_commutation
+from collections import defaultdict
+from qiskit.quantum_info import Pauli, SparsePauliOp
+from .observables import sample_shots, evaluate_observable, number_operator
 
 def qdrift_evolution(paulis, psi_0, T, dt, obs, N, N_shots):
     """
@@ -44,7 +44,7 @@ def qdrift_evolution(paulis, psi_0, T, dt, obs, N, N_shots):
         avg_measurement += np.array(single_run)
     return avg_measurement/N_shots
 
-def random_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
+def naive_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
     """
     Control for qDRIFT evolution; randomizes order of Paulis.
     paulis (list): Hamiltonian terms as (label, coeff)
@@ -87,6 +87,48 @@ def random_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
         avg_measurement += np.array(single_run)
     return avg_measurement/N_shots
 
+def group_paulis(paulis, number_op, tol=1e-10):
+    """
+    Helper function that groups commuting Pauli terms while preserving number operator.
+    paulis (list): Hamiltonian terms as (label, coeff)
+    number_op (SparsePauliOp): Number operator used for commutation check
+    tol (float): Numerical tolerance for commutation test
+    Returns: list (groups of commuting Pauli terms)
+    """
+    groups = []
+    iz_group = []
+
+    buckets = defaultdict(list)
+
+    for label, coeff in paulis:
+        p = Pauli(label)
+        if all(c in ["I", "Z"] for c in label):
+            iz_group.append((p, coeff))
+        else:
+            buckets[round(abs(np.real(coeff)), 10)].append((p, coeff))
+
+    if iz_group:
+        groups.append(iz_group)
+
+    for bucket in buckets.values():
+        for p, coeff in bucket:
+            added = False
+            for group in groups[1:]:
+                if all(p.commutes(q) for q, _ in group):
+                    test_group = group + [(p, coeff)]
+                    op = SparsePauliOp([x.to_label() for x, _ in test_group],[c for _, c in test_group])
+                    comm = op @ number_op - number_op @ op
+
+                    if np.allclose(comm.to_matrix(), 0, atol=tol):
+                        group.append((p, coeff))
+                        added = True
+                        break
+
+            if not added:
+                groups.append([(p, coeff)])
+
+    return groups
+
 def symmetry_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
     """
     Performs qDRIFT evolution by grouping Pauli terms with Z and I together and X and Y together.
@@ -100,31 +142,11 @@ def symmetry_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
     Returns: np.ndarray (averaged measurements over time)
     """
 
-    term_A=[] #Z and I
-    term_B=[] #X and Y
-
-    for label, coeff in paulis:
-        p_obj = Pauli(label)
-        if all(c in ['I', 'Z'] for c in label):
-            term_A.append((p_obj, coeff))
-        else:
-            term_B.append((p_obj, coeff))
-
-    A_check = check_internal_commutation(term_A) and check_obs_commutation(term_A, obs)
-    B_check = check_internal_commutation(term_B) and check_obs_commutation(term_B, obs)
-
-    if not A_check:
-        print("Warning: Commutation check failed for Group A. Approximation error may occur.")
-    if not B_check:
-        print("Warning: Commutation check failed for Group B. Approximation error may occur.")
+    grouped_paulis = group_paulis(paulis, number_operator(N))
     
-    norm_A = sum(abs(c) for _, c in term_A)
-    norm_B = sum(abs(c) for _, c in term_B)
-    lam = norm_A + norm_B
-
-    probs = [norm_A / lam, norm_B / lam]
-    groups = [term_A, term_B]
-    group_norms = [norm_A, norm_B]
+    group_norms = [sum(abs(c) for _,c in group) for group in grouped_paulis]
+    lam = sum(group_norms)
+    probs = [g/lam for g in group_norms]
     
     steps = int(T/dt)
     tau = T*lam/steps
@@ -137,8 +159,8 @@ def symmetry_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
         single_run.append(evaluate_observable(initial,N,obs))
         
         for _ in range(steps):
-            idx = np.random.choice([0, 1], p=probs)
-            selected_group = groups[idx]
+            idx = np.random.choice(len(grouped_paulis), p=probs)
+            selected_group = grouped_paulis[idx]
             current_norm = group_norms[idx]
             for pauli, coeff in selected_group:
                 angle = np.real(coeff) * (tau / current_norm)

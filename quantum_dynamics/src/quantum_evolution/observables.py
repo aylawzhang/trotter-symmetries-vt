@@ -14,30 +14,30 @@ def magnetization_operator(N):
         terms.append(("".join(op), 1.0/N))
     return SparsePauliOp.from_list(terms)
 
-def IIZI_observable(N):
+def Z_operator(N):
     """
-    Creates the IIZI observable
+    Creates the Z observable where the Z is at the N/2 position.
     N (int): Number of qubits
     Returns: SparsePauliOp
     """
     op = ["I"] * N
-    op[2] = "Z"
+    op[(N//2)-1] = "Z"
     return SparsePauliOp.from_list([("".join(op), 1.0)])
 
 def number_operator(nq):
     """
-    Creates the number operator observable N = sum(I - Zi)
+    Creates the number operator observable N = sum(I - Zi) / 2
     nq (int): Number of qubits
     Returns: SparsePauliOp
     """
     pauli_list = []
     
     identity_str = "I" * nq
-    pauli_list.append((identity_str, float(nq)))
+    pauli_list.append((identity_str, float(nq)/2))
     for i in range(nq):
         op = list("I" * nq)
         op[i] = "Z"
-        pauli_list.append(("".join(op), -1.0))
+        pauli_list.append(("".join(op), -0.5))
     return SparsePauliOp.from_list(pauli_list)
 
 def sample_shots(psi, N_shots):

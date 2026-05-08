@@ -38,12 +38,13 @@ def heisenberg_xxz_hamiltonian(N, J, delta):
             terms.append(("".join(reversed(op)), coeff))
     return SparsePauliOp.from_list(terms)
 
-def h2_hamiltonian(bond_length_A):
-    symbols = ["H", "H"]
-    bohr_dist = bond_length_A * 1.889726
-    geometry = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, bohr_dist]])
-    molecule = qml.qchem.Molecule(symbols, geometry)
-    hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
+def build_hamiltonian(hamiltonian, qubits):
+    """
+    Converts a PennyLane Hamiltonian into a Qiskit SparsePauliOp
+    hamiltonian: PennyLane qubit Hamiltonian
+    qubits (int): Number of qubits
+    Returns: SparsePauliOp
+    """
     terms = []
     coeffs, ops = hamiltonian.terms()
     
@@ -56,3 +57,56 @@ def h2_hamiltonian(bond_length_A):
         terms.append(("".join(reversed(pauli_string)), float(coeff)))
         
     return SparsePauliOp.from_list(terms), qubits
+
+def h2_hamiltonian(bond_length_A):
+    """
+    Constructs the H2 molecular Hamiltonian
+    bond_length_A (float): Bond length in angstroms
+    Returns: SparsePauliOp, int
+    """
+    symbols = ["H", "H"]
+    bohr_dist = bond_length_A * 1.889726
+    geometry = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, bohr_dist]])
+    molecule = qml.qchem.Molecule(symbols, geometry)
+    hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
+    return build_hamiltonian(hamiltonian,qubits),qubits
+
+def h3_hamiltonian(bond_length_A):
+    """
+    Constructs the H3 molecular Hamiltonian
+    bond_length_A (float): Distance between neighboring atoms in angstroms
+    Returns: SparsePauliOp, int
+    """
+    symbols = ["H", "H", "H"]
+    bohr_dist = bond_length_A * 1.889726
+    geometry = np.array([[0.0, 0.0, 0.0],[0.0, 0.0, bohr_dist],[0.0, 0.0, 2 * bohr_dist]])
+    molecule = qml.qchem.Molecule(symbols, geometry)
+    hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
+    return build_hamiltonian(hamiltonian, qubits), qubits
+
+def h4_hamiltonian(bond_length_A):
+    """
+    Constructs the H4 molecular Hamiltonian
+    bond_length_A (float): Distance between neighboring atoms in angstroms
+    Returns: SparsePauliOp, int
+    """
+    symbols = ["H", "H", "H", "H"]
+    bohr_dist = bond_length_A * 1.889726
+    geometry = np.array([[0.0, 0.0, 0.0],[0.0, 0.0, bohr_dist],[0.0, 0.0, 2 * bohr_dist],[0.0, 0.0, 3 * bohr_dist]])
+    molecule = qml.qchem.Molecule(symbols, geometry)
+    hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
+    return build_hamiltonian(hamiltonian, qubits), qubits
+
+def h2o_hamiltonian(bond_length_A=0.9584, bond_angle_deg=104.5):
+    """
+    Constructs the H2O molecular Hamiltonian
+    bond_length_A (float): Distance between neighboring atoms in angstroms
+    bond_angle_deg (float): Angle between hydrogen atoms
+    Returns: SparsePauliOp, int
+    """
+    symbols = ["O", "H", "H"]
+    theta = np.deg2rad(bond_angle_deg)
+    geometry = np.array([[0.0,0.0,0.0],[bond_length_A*np.sin(theta/2),0.0,bond_length_A*np.cos(theta/2)],[-bond_length_A*np.sin(theta/2),0.0,bond_length_A*np.cos(theta/2)]])
+    molecule = qml.qchem.Molecule(symbols, geometry)
+    hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
+    return build_hamiltonian(hamiltonian, qubits), qubits
