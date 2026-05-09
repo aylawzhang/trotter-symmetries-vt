@@ -54,9 +54,9 @@ def build_hamiltonian(hamiltonian, qubits):
             for wire, p_char in pw.items():
                 pauli_string[wire] = p_char
             
-        terms.append(("".join(reversed(pauli_string)), float(coeff)))
+        terms.append(("".join(reversed(pauli_string)), float(np.real(coeff))))
         
-    return SparsePauliOp.from_list(terms), qubits
+    return SparsePauliOp.from_list(terms)
 
 def h2_hamiltonian(bond_length_A):
     """
@@ -71,16 +71,15 @@ def h2_hamiltonian(bond_length_A):
     hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
     return build_hamiltonian(hamiltonian,qubits),qubits
 
-def h3_hamiltonian(bond_length_A):
+def h3_hamiltonian(bond_length_A=1.0):
     """
     Constructs the H3 molecular Hamiltonian
     bond_length_A (float): Distance between neighboring atoms in angstroms
     Returns: SparsePauliOp, int
     """
     symbols = ["H", "H", "H"]
-    bohr_dist = bond_length_A * 1.889726
-    geometry = np.array([[0.0, 0.0, 0.0],[0.0, 0.0, bohr_dist],[0.0, 0.0, 2 * bohr_dist]])
-    molecule = qml.qchem.Molecule(symbols, geometry)
+    geometry = np.array([[0.0, 0.0, 0.0],[bond_length_A, 0.0, 0.0],[0.5 * bond_length_A, np.sqrt(3)/2 * bond_length_A, 0.0]])
+    molecule = qml.qchem.Molecule(symbols, geometry, charge=1)
     hamiltonian, qubits = qml.qchem.molecular_hamiltonian(molecule)
     return build_hamiltonian(hamiltonian, qubits), qubits
 

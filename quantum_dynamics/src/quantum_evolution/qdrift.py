@@ -2,7 +2,7 @@ import numpy as np
 import random
 from collections import defaultdict
 from qiskit.quantum_info import Pauli, SparsePauliOp
-from .observables import sample_shots, evaluate_observable, number_operator
+from .observables import sample_shots, evaluate_observable
 
 def qdrift_evolution(paulis, psi_0, T, dt, obs, N, N_shots):
     """
@@ -87,7 +87,7 @@ def naive_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
         avg_measurement += np.array(single_run)
     return avg_measurement/N_shots
 
-def group_paulis(paulis, number_op, tol=1e-10):
+def group_paulis(paulis, tol=1e-10):
     """
     Helper function that groups commuting Pauli terms while preserving number operator.
     paulis (list): Hamiltonian terms as (label, coeff)
@@ -116,10 +116,13 @@ def group_paulis(paulis, number_op, tol=1e-10):
             for group in groups[1:]:
                 if all(p.commutes(q) for q, _ in group):
                     test_group = group + [(p, coeff)]
-                    op = SparsePauliOp([x.to_label() for x, _ in test_group],[c for _, c in test_group])
-                    comm = op @ number_op - number_op @ op
-
-                    if np.allclose(comm.to_matrix(), 0, atol=tol):
+                    valid = True
+                    for x, _ in test_group:
+                        xy_count = sum(c in ["X", "Y"] for c in x.to_label())
+                        if xy_count % 2 != 0:
+                            valid = False
+                            break
+                    if valid:
                         group.append((p, coeff))
                         added = True
                         break
@@ -131,7 +134,7 @@ def group_paulis(paulis, number_op, tol=1e-10):
 
 def symmetry_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
     """
-    Performs qDRIFT evolution by grouping Pauli terms with Z and I together and X and Y together.
+    Performs qDRIFT evolution by grouping Pauli terms into commuting groups to preserve number operator.
     paulis (list): Hamiltonian terms as (label, coeff)
     psi_0 (Statevector): Initial state
     T (float): Total evolution time
@@ -141,15 +144,14 @@ def symmetry_qdrift(paulis, psi_0, T, dt, obs, N, N_shots):
     N_shots (int): Number of random evolutions
     Returns: np.ndarray (averaged measurements over time)
     """
-
-    grouped_paulis = group_paulis(paulis, number_operator(N))
+    grouped_paulis = group_paulis(paulis)
     
     group_norms = [sum(abs(c) for _,c in group) for group in grouped_paulis]
     lam = sum(group_norms)
     probs = [g/lam for g in group_norms]
     
     steps = int(T/dt)
-    tau = T*lam/steps
+    tau = lam*dt
     avg_measurement = np.zeros(steps + 1)
 
     for _ in range(N_shots):

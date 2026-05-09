@@ -33,14 +33,6 @@ def simulation():
 
     indices = np.linspace(0, trotter_steps, points, dtype=int)
     times = np.linspace(0, T, trotter_steps + 1)[indices]
-    plt.rcParams.update({
-        "figure.titlesize": 20,
-        "axes.titlesize": 18,
-        "axes.labelsize": 16,
-        "xtick.labelsize": 14,
-        "ytick.labelsize": 14,
-        "legend.fontsize": 13
-    })
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     axes = axes.flatten()
 
@@ -102,7 +94,7 @@ def simulation():
 
         print("config done")
 
-    plt.suptitle(f"H2 Time Evolution from Hartree-Fock State |{hf_state}>")
+    plt.suptitle(f"H2 Time Evolution from Hartree-Fock State |{hf_state}>", fontsize=16)
     plt.tight_layout()
     plt.show()
 

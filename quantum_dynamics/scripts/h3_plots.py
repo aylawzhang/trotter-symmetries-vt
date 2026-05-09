@@ -4,13 +4,15 @@ import matplotlib.pyplot as plt
 from scipy.linalg import expm
 from qiskit.quantum_info import Statevector
 
-from quantum_evolution.hamiltonians import h2_hamiltonian
+from quantum_evolution.hamiltonians import h3_hamiltonian
 from quantum_evolution.observables import number_operator, Z_operator
 from quantum_evolution.trotter import trotter_evolution
 from quantum_evolution.qdrift import naive_qdrift, symmetry_qdrift
 
 def simulation():
-    H_op,N = h2_hamiltonian(1.0)
+    t0=time.perf_counter()
+    tc=t0
+    H_op,N = h3_hamiltonian(1.0)
     paulis = H_op.to_list()
 
     N_op=number_operator(N)
@@ -45,6 +47,7 @@ def simulation():
     axes = axes.flatten()
 
     for ax, (title, obs, shots) in zip(axes, configs):
+        print(f"Starting {title}")
 
         #Exact evolution
         H_mat = H_op.to_matrix()
@@ -78,7 +81,10 @@ def simulation():
             q_symm = symmetry_qdrift(paulis, psi_0, T, dt, obs, N,shots)
             qdrift_symm.append(q_symm)
             
-            print("trial done")
+            tp=time.perf_counter()
+            print(f"Trial {_+1} done: {(tc-tp):.0f}s")
+            tc=tp
+
 
         trotter_ctrl = np.array(trotter_ctrl)
         qdrift_naive = np.array(qdrift_naive)
@@ -100,9 +106,7 @@ def simulation():
         ax.set_ylabel("Expectation Value")
         ax.legend()
 
-        print("config done")
-
-    plt.suptitle(f"H2 Time Evolution from Hartree-Fock State |{hf_state}>")
+    plt.suptitle(f"H3 Time Evolution from Hartree-Fock State |{hf_state}>")
     plt.tight_layout()
     plt.show()
 
