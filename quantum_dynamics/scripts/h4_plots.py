@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import expm
 from qiskit.quantum_info import Statevector
 
-from quantum_evolution.hamiltonians import h3_hamiltonian
+from quantum_evolution.hamiltonians import h4_hamiltonian
 from quantum_evolution.observables import number_operator, Z_operator
 from quantum_evolution.trotter import trotter_evolution
 from quantum_evolution.qdrift import naive_qdrift, symmetry_qdrift
@@ -12,7 +12,7 @@ from quantum_evolution.qdrift import naive_qdrift, symmetry_qdrift
 def simulation():
     t0=time.perf_counter()
     tc=t0
-    H_op,N = h3_hamiltonian(1.0)
+    H_op,N = h4_hamiltonian(1.0)
     paulis = H_op.to_list()
 
     N_op=number_operator(N)
@@ -106,7 +106,7 @@ def simulation():
         ax.set_ylabel("Expectation Value")
         ax.legend()
 
-    plt.suptitle(f"H3 Time Evolution from Hartree-Fock State |{hf_state}>")
+    plt.suptitle(f"H4 Time Evolution from Hartree-Fock State |{hf_state}>")
     plt.tight_layout()
     plt.show()
 

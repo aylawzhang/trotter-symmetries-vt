@@ -1,5 +1,5 @@
 import numpy as np
-from qiskit.quantum_info import SparsePauliOp, PauliList, Pauli, Statevector
+from qiskit.quantum_info import SparsePauliOp
 import pennylane as qml
 
 def ising_and_transverse_hamiltonian(N, J, h=0.0):
@@ -99,7 +99,7 @@ def h4_hamiltonian(bond_length_A):
 def h2o_hamiltonian(bond_length_A=0.9584, bond_angle_deg=104.5):
     """
     Constructs the H2O molecular Hamiltonian
-    bond_length_A (float): Distance between neighboring atoms in angstroms
+    bond_length_A (float): O-H bond length in angstroms
     bond_angle_deg (float): Angle between hydrogen atoms
     Returns: SparsePauliOp, int
     """

@@ -1,5 +1,5 @@
 import numpy as np
-from qiskit.quantum_info import SparsePauliOp, PauliList, Pauli, Statevector
+from qiskit.quantum_info import SparsePauliOp
 
 def magnetization_operator(N):
     """

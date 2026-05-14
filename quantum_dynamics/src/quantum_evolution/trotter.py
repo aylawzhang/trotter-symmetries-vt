@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from qiskit.quantum_info import Pauli, SparsePauliOp
+from qiskit.quantum_info import Pauli
 from .observables import sample_shots, evaluate_observable
 
 def trotter_evolution(paulis, psi_0, T, dt, obs, N, N_shots):

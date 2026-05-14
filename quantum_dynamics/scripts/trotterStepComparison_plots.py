@@ -16,10 +16,10 @@ def simulation():
     
     obs = magnetization_operator(N)
    
-    T = 2.0
+    T = 5.0
     trials=5
-    step_list=[20, 200]
-    exact_steps = 200
+    step_list=[20,200]
+    exact_steps = 300
     
     psi_0 = Statevector(np.random.rand(2**N) + 1j*np.random.rand(2**N))
     psi_0 /= np.linalg.norm(psi_0)
@@ -73,7 +73,7 @@ def simulation():
         ax.set_ylabel("Magnetization")
         ax.legend()
     
-    plt.suptitle("Effect of Trotter Step Count")
+    plt.suptitle("Effect of Trotter Step Count (N=6)")
     plt.tight_layout()
     plt.show()
 

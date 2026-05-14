@@ -16,7 +16,7 @@ def simulation():
     N_op=number_operator(N)
     Z_op=Z_operator(N)
    
-    T = 0.5
+    T = 2.0
     trials=5
     points=10
     trotter_steps=100
